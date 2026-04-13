@@ -24,10 +24,12 @@
 //   console.log("Server running on http://localhost:" + PORT);
 // });
 const express = require("express");
+const cors = require("cors")
+const path = require("path")
 const app = express();
 
-app.get("/question/:unit", (req, res) => {
-   const unit = req.params.unit;
+app.use(cors());
+app.use(express.static(path.join(__dirname, "..")));
 
    const questions = {
        1: {
@@ -41,7 +43,8 @@ app.get("/question/:unit", (req, res) => {
            answer: "6.02e23"
        }
    };
-
+   app.get("/question/:unit", (req, res) => {
+   const unit = req.params.unit;
    res.json(questions[unit]);
 });
 
