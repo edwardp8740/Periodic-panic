@@ -310,8 +310,18 @@
     ];
 
     // ===== FETCH QUESTION =====
-    async function getQuestion(unit) {
-      const res = await fetch(`http://localhost:3000/question/${unit}`);
+    async function getQuestion(unit) { // `unit` represents a number
+      
+      // attempt 1, doesn't work for alex locally
+      // const res = await fetch(`http://localhost:3000/question/${unit}`);
+      
+      // attempt 2, works for alex locally but won't work on github pages
+      // const baseUrl = "https://cuddly-doodle-pjpgw5q4jwgrf6pvq-3000.app.github.dev";
+      // const res = await fetch(`${baseUrl}/question/${unit}`);
+
+      // attempt 3, works locally, will it work on github pages?
+      const res = await fetch(`/question/${unit}`);
+
       const data = await res.json();
       return data;
     }
