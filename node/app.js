@@ -41,6 +41,11 @@ const questions = {
     question: "What is Avogadro's number?",
     choices: ["6.02e23", "3.14", "9.8"],
     answer: "6.02e23"
+  },
+  3: {
+    question: "What is the electron configuration of Oxygen?",
+    choices: ["1s^2 2s^2 2p^4", "1s^2 2s^2 2p^6", "1s^2 2s^3, 2p^4"],
+    answer: "1s^2 2s^2 2p^4"
   }
 };
 
