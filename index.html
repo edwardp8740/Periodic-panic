@@ -32,6 +32,57 @@
             let deaths = 0;
             let hurtTimer = 0;
 
+
+
+
+            // ===== API FUNCTION =====
+            async function getQuestion(unit) {
+                try {
+                    const res = await fetch(`http://localhost:4000/question/${unit}`);
+                    if (!res.ok) throw new Error("Bad response");
+                    return await res.json();
+                } catch (err) {
+                    console.error("FETCH ERROR:", err);
+                    return {
+                        question: "Failed to load question",
+                        choices: ["Retry"],
+                        answer: "Retry"
+                    };
+                }
+            }
+
+            // ===== QUESTION SCENE (FIXED LOCATION) =====
+            scene("question", async ({ levelIndex }) => {
+
+                const data = await getQuestion(levelIndex + 1);
+
+                add([text("Unit " + (levelIndex + 1), { size: 28 }), pos(100, 40)]);
+                add([text(data.question, { size: 32 }), pos(100, 120)]);
+
+                data.choices.forEach((choice, i) => {
+                    add([
+                        text(choice),
+                        pos(120, 220 + i * 60),
+                        area(),
+                        "choice",
+                        { value: choice }
+                    ]);
+                });
+
+                onClick("choice", (c) => {
+                    if (c.value === data.answer) {
+                        go("game", { i: levelIndex + 1 });
+                    } else {
+                        go("game", { i: levelIndex });
+                    }
+                });
+            });
+
+
+
+
+
+
             // ===== HELPERS =====
             function padMap(map){
                 let max = Math.max(...map.map(r=>r.length));
@@ -412,40 +463,8 @@
 
                 // run hazards
                 L.special(player);
-                async function getQuestion(unit) {
-                    const res = await fetch(`http://localhost:3000/question/${unit}`);
-                    const data = await res.json();
-                    return data;
-                }
-                scene("question", async ({ levelIndex }) => {
 
-                    const data = await getQuestion(levelIndex + 1);
-
-                    add([
-                        text(data.question, { size: 32 }),
-                        pos(100, 100),
-                    ]);
-
-                    data.choices.forEach((choice, i) => {
-                        add([
-                            text(choice),
-                            pos(100, 200 + i * 60),
-                            area(),
-                            "choice",
-                            { value: choice }
-                        ]);
-                    });
-
-                    onClick("choice", (c) => {
-                        if (c.value === data.answer) {
-                            go("game", { i: levelIndex + 1 });
-                        } else {
-                            go("game", { i: levelIndex }); // retry level
-                        }
-                    });
-                });
             });
-
             go("game",{i:0});
         </script>
     </body>
