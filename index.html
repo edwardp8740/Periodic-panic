@@ -1,471 +1,443 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <!-- Required meta tags -->
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-        <!-- <link href="style.css" rel="stylesheet" type="text/css" /> -->
-        <style>
-            body { margin:0; overflow:hidden; background:#111; }
-        </style>
-
-        <title>AP Chem Game </title>
-    </head>
-    <body>
-        <!-- HTML -->
-        
-        
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-        <!-- <script src="script.js"></script> -->
-        <script type="module">
-            import kaboom from "https://unpkg.com/kaboom@3000.0.1/dist/kaboom.mjs";
-
-            // ===== SETUP =====
-            kaboom({ global:true, width:1280, height:720 });
-
-            const SPEED = 320;
-            const JUMP_FORCE = 950;
-            const TILE = 64;
-
-            let deaths = 0;
-            let hurtTimer = 0;
-
-
-
-
-            // ===== API FUNCTION =====
-            async function getQuestion(unit) {
-                try {
-                    const res = await fetch(`http://localhost:4000/question/${unit}`);
-                    if (!res.ok) throw new Error("Bad response");
-                    return await res.json();
-                } catch (err) {
-                    console.error("FETCH ERROR:", err);
-                    return {
-                        question: "Failed to load question",
-                        choices: ["Retry"],
-                        answer: "Retry"
-                    };
-                }
-            }
-
-            // ===== QUESTION SCENE (FIXED LOCATION) =====
-            scene("question", async ({ levelIndex }) => {
-
-                const data = await getQuestion(levelIndex + 1);
-
-                add([text("Unit " + (levelIndex + 1), { size: 28 }), pos(100, 40)]);
-                add([text(data.question, { size: 32 }), pos(100, 120)]);
-
-                data.choices.forEach((choice, i) => {
-                    add([
-                        text(choice),
-                        pos(120, 220 + i * 60),
-                        area(),
-                        "choice",
-                        { value: choice }
-                    ]);
-                });
-
-                onClick("choice", (c) => {
-                    if (c.value === data.answer) {
-                        go("game", { i: levelIndex + 1 });
-                    } else {
-                        go("game", { i: levelIndex });
-                    }
-                });
-            });
-
-
-
-
-
-
-            // ===== HELPERS =====
-            function padMap(map){
-                let max = Math.max(...map.map(r=>r.length));
-                return map.map(r=>r.padEnd(max," "));
-            }
-
-            function bg(c){
-                add([rect(width(),height()), pos(0,0), color(...c), fixed()]);
-            }
-
-            // damage system
-            function hurtPlayer(p, checkpoint){
-                if(hurtTimer > 0) return false;
-
-                hurtTimer = 0.4;
-                p.hurt(1);
-
-                if(p.hp() <= 0){
-                    deaths++;
-                    return true;
-                }
-
-                p.pos = checkpoint.clone();
-                p.vel = vec2(0,0);
-                return false;
-            }
-
-            // ===== HAZARDS =====
-
-            // spawn around player so always visible
-            function falling(player){
-                const x = player.pos.x + rand(-600,600);
-                const f = add([rect(28,28), pos(x,-50), area(), color(255,90,90), "danger"]);
-                f.onUpdate(()=> f.pos.y += 320 * dt());
-            }
-
-            // smart chaser
-            function chaser(player, offset){
-                const e = add([rect(34,34), pos(player.pos.x+offset,200), area(), color(255,60,60), "danger"]);
-                e.dir = 1;
-
-                e.onUpdate(()=>{
-                    let dx = player.pos.x - e.pos.x;
-                    let dy = player.pos.y - e.pos.y;
-
-                    e.pos.x += Math.sign(dx)*170*dt() + e.dir*120*dt();
-                    e.pos.y += Math.sign(dy)*110*dt();
-
-                    if(rand() < 0.03) e.dir *= -1;
-                });
-            }
-
-            // laser
-            function laser(player, offset){
-                const l = add([rect(28,160), pos(player.pos.x+offset,150), area(), color(255,230,80), "danger"]);
-                l.dir = 1;
-
-                l.onUpdate(()=>{
-                    l.pos.y += l.dir * 230 * dt();
-                    if(l.pos.y > 620) l.dir = -1;
-                    if(l.pos.y < 120) l.dir = 1;
-                });
-            }
-
-            // crusher
-            function crusher(player, offset){
-                const c = add([rect(80,200), pos(player.pos.x+offset,100), area(), color(255,120,120), "danger"]);
-                c.dir = 1;
-
-                c.onUpdate(()=>{
-                    c.pos.y += c.dir * 250 * dt();
-                    if(c.pos.y > 620) c.dir = -1;
-                    if(c.pos.y < 100) c.dir = 1;
-                });
-            }
-
-            // acid
-            function acid(){
-                const a = add([rect(5000,90), pos(-1000,650), area(), color(60,255,120), "danger"]);
-                a.onUpdate(()=> a.pos.y -= 7 * dt());
-            }
-
-            // ===== TILES =====
-            const tiles = {
-                "=":()=>[
-                    rect(TILE,TILE),
-                    area(),
-                    body({isStatic:true}),
-                    color(100,200,255),
-                    "solid",
-                    "troll"
-                ],
-
-                "c":()=>[rect(40,40), area(), color(100,255,100), "checkpoint"],
-                "e":()=>[rect(40,40), area(), color(200,100,255), "end"],
-            };
-
-            // ===== LEVELS =====
-            const levels = [
-
-                {
-                title:"Unit 1 Intro Troll",
-                bg:[180,220,255],
-                start:vec2(100,100),
-                map:[
-                    "====================================================================================",
-                    "=                                                                                  =",
-                    "=  c                                                                               =",
-                    "=      ====      ====      ====      ====      ====      ====                      =",
-                    "=                                                                                  =",
-                    "=      ====      ====      ====      ====      ====      ====                      =",
-                    "=                                                                                  =",
-                    "=                                                                         e        =",
-                    "====================================================================================",
-                ],
-                special(p){
-                    loop(2, ()=>falling(p));
-                    crusher(p,600);
-                }
-                },
-
-                {
-                title:"Unit 2 Falling Chaos",
-                bg:[255,210,140],
-                start:vec2(100,100),
-                map:[
-                    "====================================================================================",
-                    "=                                                                                  =",
-                    "=  c                                                                               =",
-                    "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
-                    "=                                                                                  =",
-                    "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
-                    "=                                                                                  =",
-                    "=                                                                        e         =",
-                    "====================================================================================",
-                ],
-                special(p){
-                    loop(0.8, ()=>falling(p));
-                    laser(p,800);
-                }
-                },
-
-                {
-                title:"Unit 3 Double Chaser",
-                bg:[200,255,200],
-                start:vec2(100,100),
-                map:[
-                    "====================================================================================",
-                    "=                                                                                  =",
-                    "=  c                                                                               =",
-                    "=    ====       ====        ====        ====        ====                            =",
-                    "=                                                                                  =",
-                    "=    ====       ====        ====        ====        ====                            =",
-                    "=                                                                                  =",
-                    "=                                                                       e          =",
-                    "====================================================================================",
-                ],
-                special(p){
-                    chaser(p,300);
-                    chaser(p,900);
-                }
-                },
-
-                {
-                title:"Unit 4 Crushers",
-                bg:[255,180,255],
-                start:vec2(100,100),
-                map:[
-                    "====================================================================================",
-                    "=                                                                                  =",
-                    "=  c                                                                               =",
-                    "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
-                    "=                                                                                  =",
-                    "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
-                    "=                                                                                  =",
-                    "=                                                                        e         =",
-                    "====================================================================================",
-                ],
-                special(p){
-                    crusher(p,400);
-                    crusher(p,900);
-                    laser(p,1200);
-                }
-                },
-
-                {
-                title:"Unit 5 Acid Rise",
-                bg:[200,150,255],
-                start:vec2(100,100),
-                map:[
-                    "====================================================================================",
-                    "=                                                                                  =",
-                    "=  c                                                                               =",
-                    "=     ====      ====      ====      ====      ====      ====                        =",
-                    "=                                                                                  =",
-                    "=     ====      ====      ====      ====      ====      ====                        =",
-                    "=                                                                                  =",
-                    "=                                                                        e         =",
-                    "====================================================================================",
-                ],
-                special(p){
-                    acid();
-                    chaser(p,600);
-                }
-                },
-
-                {
-                title:"Unit 6 Combo Hell",
-                bg:[255,220,180],
-                start:vec2(100,100),
-                map:[
-                    "====================================================================================",
-                    "=                                                                                  =",
-                    "=  c                                                                               =",
-                    "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
-                    "=                                                                                  =",
-                    "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
-                    "=                                                                                  =",
-                    "=                                                                        e         =",
-                    "====================================================================================",
-                ],
-                special(p){
-                    acid();
-                    chaser(p,500);
-                    loop(1, ()=>falling(p));
-                }
-                },
-
-                {
-                title:"Unit 7 Laser Grid",
-                bg:[180,255,255],
-                start:vec2(100,100),
-                map:[
-                    "====================================================================================",
-                    "=                                                                                  =",
-                    "=  c                                                                               =",
-                    "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
-                    "=                                                                                  =",
-                    "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
-                    "=                                                                                  =",
-                    "=                                                                        e         =",
-                    "====================================================================================",
-                ],
-                special(p){
-                    laser(p,400);
-                    laser(p,800);
-                    laser(p,1200);
-                }
-                },
-
-                {
-                title:"Unit 8 Chaos Mix",
-                bg:[255,255,180],
-                start:vec2(100,100),
-                map:[
-                    "====================================================================================",
-                    "=                                                                                  =",
-                    "=  c                                                                               =",
-                    "=     ====      ====      ====      ====      ====      ====                        =",
-                    "=                                                                                  =",
-                    "=     ====      ====      ====      ====      ====      ====                        =",
-                    "=                                                                                  =",
-                    "=                                                                        e         =",
-                    "====================================================================================",
-                ],
-                special(p){
-                    acid();
-                    chaser(p,400);
-                    chaser(p,1000);
-                    laser(p,700);
-                }
-                },
-
-                {
-                title:"FINAL Insanity",
-                bg:[255,150,255],
-                start:vec2(100,100),
-                map:[
-                    "====================================================================================",
-                    "=                                                                                  =",
-                    "=  c                                                                               =",
-                    "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
-                    "=                                                                                  =",
-                    "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
-                    "=                                                                                  =",
-                    "=                                                                        e         =",
-                    "====================================================================================",
-                ],
-                special(p){
-                    acid();
-                    chaser(p,400);
-                    chaser(p,1000);
-                    loop(0.7, ()=>falling(p));
-                    laser(p,800);
-                    crusher(p,1200);
-                }
-                }
-
-            ];
-
-            // ===== GAME =====
-            scene("game", ({i})=>{
-
-                let L = levels[i];
-                bg(L.bg);
-                setGravity(1600);
-
-                let checkpoint = L.start.clone();
-
-                addLevel(padMap(L.map), {
-                    tileWidth:TILE,
-                    tileHeight:TILE,
-                    tiles:tiles,
-                });
-
-                const player = add([
-                    rect(36,36),
-                    pos(checkpoint),
-                    area(),
-                    body(),
-                    color(255,255,255),
-                    "player",
-                    health(3),
-                ]);
-
-                // ===== DEATH COUNTER =====
-                const deathText = add([
-                    text("Deaths: "+deaths),
-                    pos(20,20),
-                    fixed()
-                ]);
-
-                onUpdate(()=> deathText.text = "Deaths: " + deaths);
-
-                // ===== CONTROLS =====
-                onKeyDown("left", ()=>player.move(-SPEED,0));
-                onKeyDown("a", ()=>player.move(-SPEED,0));
-                onKeyDown("right", ()=>player.move(SPEED,0));
-                onKeyDown("d", ()=>player.move(SPEED,0));
-
-                onKeyPress("space", ()=>{ if(player.isGrounded()) player.jump(JUMP_FORCE); });
-                onKeyPress("w", ()=>{ if(player.isGrounded()) player.jump(JUMP_FORCE); });
-
-                // ===== TROLL FLOOR =====
-                player.onCollide("troll",(tile)=>{
-                    if(rand() < 0.25){
-                        wait(0.2, ()=>{
-                            tile.use(body({isStatic:false}));
-                            if(rand()<0.5) destroy(tile);
-                        });
-                    }
-                });
-
-                // ===== UPDATE =====
-                player.onUpdate(()=>{
-                    camPos(player.pos);
-                    hurtTimer = Math.max(0, hurtTimer - dt());
-
-                    if(player.pos.y > height()+200){
-                        deaths++;
-                        go("game",{i});
-                    }
-                });
-
-                // ===== COLLISIONS =====
-                player.onCollide("danger", ()=>{
-                    if(hurtPlayer(player,checkpoint)) go("game",{i});
-                });
-
-                player.onCollide("checkpoint",(c)=>{
-                    checkpoint = c.pos.clone();
-                    destroy(c);
-                });
-
-                player.onCollide("end", () => {
-                    go("question", { levelIndex: i });
-                });
-
-                // run hazards
-                L.special(player);
-
-            });
-            go("game",{i:0});
-        </script>
-    </body>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AP Chem Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      overflow: hidden;
+      background: #0a0a0f;
+    }
+
+    /* ── Question overlay ── */
+    #question-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(8, 8, 16, 0.92);
+      backdrop-filter: blur(6px);
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Mono', monospace;
+    }
+
+    #question-screen.visible {
+      display: flex;
+    }
+
+    .q-card {
+      background: #0f0f1e;
+      border: 2px solid #3a3a6e;
+      border-radius: 4px;
+      padding: 48px 52px;
+      max-width: 620px;
+      width: 90%;
+      box-shadow: 0 0 60px rgba(100, 80, 255, 0.15), 0 0 0 1px #1a1a3a;
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    <!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" /><style>body {
+      margin: 0;
+      overflow: hidden;
+      background: #111;
+    }
+  </style>
+  <title>AP Chem Game</title>
+</head>
+
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module">
+    import kaboom from "https://unpkg.com/kaboom@3000.0.1/dist/kaboom.mjs";
+
+    // ===== SETUP =====
+    kaboom({global: true, width: 1280, height: 720});
+
+    const SPEED = 320;
+    const JUMP_FORCE = 950;
+    const TILE = 64;
+
+    let deaths = 0;
+    let hurtTimer = 0;
+
+    // ===== HELPERS =====
+    function padMap(map) {
+      let max = Math.max(...map.map(r => r.length));
+      return map.map(r => r.padEnd(max, " "));
+    }
+
+    function bg(c) {
+      add([rect(width(), height()), pos(0, 0), color(...c), fixed()]);
+    }
+
+    function hurtPlayer(p, checkpoint) {
+      if (hurtTimer > 0) return false;
+      hurtTimer = 0.4;
+      p.hurt(1);
+      if (p.hp() <= 0) {
+        deaths++;
+        return true;
+      }
+      p.pos = checkpoint.clone();
+      p.vel = vec2(0, 0);
+      return false;
+    }
+
+    // ===== HAZARDS =====
+    function falling(player) {
+      const x = player.pos.x + rand(-600, 600);
+      const f = add([rect(28, 28), pos(x, -50), area(), color(255, 90, 90), "danger"]);
+      f.onUpdate(() => f.pos.y += 320 * dt());
+    }
+
+    function chaser(player, offset) {
+      const e = add([rect(34, 34), pos(player.pos.x + offset, 200), area(), color(255, 60, 60), "danger"]);
+      e.dir = 1;
+      e.onUpdate(() => {
+        let dx = player.pos.x - e.pos.x;
+        let dy = player.pos.y - e.pos.y;
+        e.pos.x += Math.sign(dx) * 170 * dt() + e.dir * 120 * dt();
+        e.pos.y += Math.sign(dy) * 110 * dt();
+        if (rand() < 0.03) e.dir *= -1;
+      });
+    }
+
+    function laser(player, offset) {
+      const l = add([rect(28, 160), pos(player.pos.x + offset, 150), area(), color(255, 230, 80), "danger"]);
+      l.dir = 1;
+      l.onUpdate(() => {
+        l.pos.y += l.dir * 230 * dt();
+        if (l.pos.y > 620) l.dir = -1;
+        if (l.pos.y < 120) l.dir = 1;
+      });
+    }
+
+    function crusher(player, offset) {
+      const c = add([rect(80, 200), pos(player.pos.x + offset, 100), area(), color(255, 120, 120), "danger"]);
+      c.dir = 1;
+      c.onUpdate(() => {
+        c.pos.y += c.dir * 250 * dt();
+        if (c.pos.y > 620) c.dir = -1;
+        if (c.pos.y < 100) c.dir = 1;
+      });
+    }
+
+    function acid() {
+      const a = add([rect(5000, 90), pos(-1000, 650), area(), color(60, 255, 120), "danger"]);
+      a.onUpdate(() => a.pos.y -= 7 * dt());
+    }
+
+    // ===== TILES =====
+    const tiles = {
+      "=": () => [
+        rect(TILE, TILE),
+        area(),
+        body({isStatic: true}),
+        color(100, 200, 255),
+        "solid",
+        "troll"
+      ],
+      "c": () => [rect(40, 40), area(), color(100, 255, 100), "checkpoint"],
+      "e": () => [rect(40, 40), area(), color(200, 100, 255), "end"],
+    };
+
+    // ===== LEVELS =====
+    const levels = [
+      {
+        title: "Unit 1 Intro Troll",
+        bg: [180, 220, 255],
+        start: vec2(100, 100),
+        map: [
+          "====================================================================================",
+          "=                                                                                  =",
+          "=  c                                                                               =",
+          "=      ====      ====      ====      ====      ====      ====                      =",
+          "=                                                                                  =",
+          "=      ====      ====      ====      ====      ====      ====                      =",
+          "=                                                                                  =",
+          "=                                                                         e        =",
+          "====================================================================================",
+        ],
+        special(p) {loop(2, () => falling(p)); crusher(p, 600);}
+      },
+      {
+        title: "Unit 2 Falling Chaos",
+        bg: [255, 210, 140],
+        start: vec2(100, 100),
+        map: [
+          "====================================================================================",
+          "=                                                                                  =",
+          "=  c                                                                               =",
+          "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
+          "=                                                                                  =",
+          "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
+          "=                                                                                  =",
+          "=                                                                        e         =",
+          "====================================================================================",
+        ],
+        special(p) {loop(0.8, () => falling(p)); laser(p, 800);}
+      },
+      {
+        title: "Unit 3 Double Chaser",
+        bg: [200, 255, 200],
+        start: vec2(100, 100),
+        map: [
+          "====================================================================================",
+          "=                                                                                  =",
+          "=  c                                                                               =",
+          "=    ====       ====        ====        ====        ====                            =",
+          "=                                                                                  =",
+          "=    ====       ====        ====        ====        ====                            =",
+          "=                                                                                  =",
+          "=                                                                       e          =",
+          "====================================================================================",
+        ],
+        special(p) {chaser(p, 300); chaser(p, 900);}
+      },
+      {
+        title: "Unit 4 Crushers",
+        bg: [255, 180, 255],
+        start: vec2(100, 100),
+        map: [
+          "====================================================================================",
+          "=                                                                                  =",
+          "=  c                                                                               =",
+          "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
+          "=                                                                                  =",
+          "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
+          "=                                                                                  =",
+          "=                                                                        e         =",
+          "====================================================================================",
+        ],
+        special(p) {crusher(p, 400); crusher(p, 900); laser(p, 1200);}
+      },
+      {
+        title: "Unit 5 Acid Rise",
+        bg: [200, 150, 255],
+        start: vec2(100, 100),
+        map: [
+          "====================================================================================",
+          "=                                                                                  =",
+          "=  c                                                                               =",
+          "=     ====      ====      ====      ====      ====      ====                        =",
+          "=                                                                                  =",
+          "=     ====      ====      ====      ====      ====      ====                        =",
+          "=                                                                                  =",
+          "=                                                                        e         =",
+          "====================================================================================",
+        ],
+        special(p) {acid(); chaser(p, 600);}
+      },
+      {
+        title: "Unit 6 Combo Hell",
+        bg: [255, 220, 180],
+        start: vec2(100, 100),
+        map: [
+          "====================================================================================",
+          "=                                                                                  =",
+          "=  c                                                                               =",
+          "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
+          "=                                                                                  =",
+          "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
+          "=                                                                                  =",
+          "=                                                                        e         =",
+          "====================================================================================",
+        ],
+        special(p) {acid(); chaser(p, 500); loop(1, () => falling(p));}
+      },
+      {
+        title: "Unit 7 Laser Grid",
+        bg: [180, 255, 255],
+        start: vec2(100, 100),
+        map: [
+          "====================================================================================",
+          "=                                                                                  =",
+          "=  c                                                                               =",
+          "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
+          "=                                                                                  =",
+          "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
+          "=                                                                                  =",
+          "=                                                                        e         =",
+          "====================================================================================",
+        ],
+        special(p) {laser(p, 400); laser(p, 800); laser(p, 1200);}
+      },
+      {
+        title: "Unit 8 Chaos Mix",
+        bg: [255, 255, 180],
+        start: vec2(100, 100),
+        map: [
+          "====================================================================================",
+          "=                                                                                  =",
+          "=  c                                                                               =",
+          "=     ====      ====      ====      ====      ====      ====                        =",
+          "=                                                                                  =",
+          "=     ====      ====      ====      ====      ====      ====                        =",
+          "=                                                                                  =",
+          "=                                                                        e         =",
+          "====================================================================================",
+        ],
+        special(p) {acid(); chaser(p, 400); chaser(p, 1000); laser(p, 700);}
+      },
+      {
+        title: "FINAL Insanity",
+        bg: [255, 150, 255],
+        start: vec2(100, 100),
+        map: [
+          "====================================================================================",
+          "=                                                                                  =",
+          "=  c                                                                               =",
+          "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
+          "=                                                                                  =",
+          "=     ====   ====   ====   ====   ====   ====   ====   ====                         =",
+          "=                                                                                  =",
+          "=                                                                        e         =",
+          "====================================================================================",
+        ],
+        special(p) {acid(); chaser(p, 400); chaser(p, 1000); loop(0.7, () => falling(p)); laser(p, 800); crusher(p, 1200);}
+      }
+    ];
+
+    // ===== FETCH QUESTION =====
+    async function getQuestion(unit) { // `unit` represents a number
+      
+      // attempt 1, doesn't work for alex locally
+      // const res = await fetch(`http://localhost:3000/question/${unit}`);
+      
+      // attempt 2, works for alex locally but won't work on github pages
+      // const baseUrl = "https://cuddly-doodle-pjpgw5q4jwgrf6pvq-3000.app.github.dev";
+      // const res = await fetch(`${baseUrl}/question/${unit}`);
+
+      // attempt 3, works locally, will it work on github pages?
+      const res = await fetch(`/question/${unit}`);
+
+      const data = await res.json();
+      return data;
+    }
+
+    // ===== SCENES =====
+    // FIX: scene("question") is now at the top level, not nested inside scene("game")
+    scene("question", async ({levelIndex}) => {
+      bg([30, 30, 30]);
+
+      const data = await getQuestion(levelIndex + 1);
+
+      add([
+        text(data.question, {size: 32}),
+        pos(100, 100),
+      ]);
+
+      data.choices.forEach((choice, i) => {
+        add([
+          text(choice),
+          pos(100, 200 + i * 60),
+          area(),
+          "choice",
+          {value: choice}
+        ]);
+      });
+
+      onClick("choice", (c) => {
+        if (c.value === data.answer) {
+          go("game", {i: levelIndex + 1});
+        } else {
+          go("game", {i: levelIndex});
+        }
+      });
+    });
+
+    scene("game", ({i}) => {
+      let L = levels[i];
+      bg(L.bg);
+      setGravity(1600);
+
+      let checkpoint = L.start.clone();
+
+      addLevel(padMap(L.map), {
+        tileWidth: TILE,
+        tileHeight: TILE,
+        tiles: tiles,
+      });
+
+      const player = add([
+        rect(36, 36),
+        pos(checkpoint),
+        area(),
+        body(),
+        color(255, 255, 255),
+        "player",
+        health(3),
+      ]);
+
+      // ===== DEATH COUNTER =====
+      const deathText = add([
+        text("Deaths: " + deaths),
+        pos(20, 20),
+        fixed()
+      ]);
+
+      onUpdate(() => deathText.text = "Deaths: " + deaths);
+
+      // ===== CONTROLS =====
+      onKeyDown("left", () => player.move(-SPEED, 0));
+      onKeyDown("a", () => player.move(-SPEED, 0));
+      onKeyDown("right", () => player.move(SPEED, 0));
+      onKeyDown("d", () => player.move(SPEED, 0));
+
+      onKeyPress("space", () => {if (player.isGrounded()) player.jump(JUMP_FORCE);});
+      onKeyPress("w", () => {if (player.isGrounded()) player.jump(JUMP_FORCE);});
+
+      // ===== TROLL FLOOR =====
+      player.onCollide("troll", (tile) => {
+        if (rand() < 0.25) {
+          wait(0.2, () => {
+            tile.use(body({isStatic: false}));
+            if (rand() < 0.5) destroy(tile);
+          });
+        }
+      });
+
+      // ===== UPDATE =====
+      player.onUpdate(() => {
+        camPos(player.pos);
+        hurtTimer = Math.max(0, hurtTimer - dt());
+
+        if (player.pos.y > height() + 200) {
+          deaths++;
+          go("game", {i});
+        }
+      });
+
+      // ===== COLLISIONS =====
+      player.onCollide("danger", () => {
+        if (hurtPlayer(player, checkpoint)) go("game", {i});
+      });
+
+      player.onCollide("checkpoint", (c) => {
+        checkpoint = c.pos.clone();
+        destroy(c);
+      });
+
+      player.onCollide("end", () => {
+        go("question", {levelIndex: i});
+      });
+
+      L.special(player);
+    });
+
+    go("game", {i: 0});
+  </script>
+</body>
+
 </html>
