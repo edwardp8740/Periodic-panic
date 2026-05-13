@@ -3,9 +3,13 @@ const cors = require("cors");
 const path = require("path");
 const app = express();
 
-app.use(cors(//{ // testing to see if it shows on github pages 
-  //origin: 'https://edwardp9740.github.io/Periodic-panic'}
-   ));
+app.use(cors({
+  origin: [
+    "http://localhost:5500",
+    "https://edwardp9740.github.io"
+  ]
+}));
+
 app.use(express.static(path.join(__dirname, "..")));
 
 const questions = {
@@ -67,4 +71,9 @@ app.get("/question/:unit", (req, res) => {
   res.json(questions[unit]);
 });
 
-app.listen(3000, () => console.log("API running on http://localhost:3000"));
+// app.listen(3000, () => console.log("API running on http://localhost:3000"));
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`API running on port ${PORT}`);
+});
