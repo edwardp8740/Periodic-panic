@@ -3,12 +3,7 @@ const cors = require("cors");
 const path = require("path");
 const app = express();
 
-app.use(cors({
-  origin: [
-    "http://localhost:5500",
-    "https://edwardp9740.github.io"
-  ]
-}));
+app.use(cors());
 
 app.use(express.static(path.join(__dirname, "..")));
 
