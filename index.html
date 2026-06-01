@@ -602,24 +602,77 @@
       return data;
     }
 
+    // I choose a text size that keeps longer questions from running off the screen.
+    function questionTextSize(question) {
+      if (question.length > 260) return 17;
+      if (question.length > 180) return 20;
+      if (question.length > 110) return 23;
+      return 28;
+    }
+
     // I show the question scene between levels.
     scene("question", async ({ levelIndex }) => {
       bg([30, 30, 30]);
 
+      // I make sure the question screen stays on the screen even if the camera was far across the map.
+      camPos(width() / 2, height() / 2);
+
+      // I use levelIndex + 1 so level 1 gets unit 1, level 2 gets unit 2, and the final level gets unit 9.
       const data = await getQuestion(levelIndex + 1);
 
       add([
-        text(data.question, { size: 32 }),
-        pos(100, 100),
+        rect(1120, 640),
+        pos(width() / 2, height() / 2),
+        anchor("center"),
+        color(15, 15, 30),
+        fixed()
+      ]);
+
+      add([
+        text(`Unit ${levelIndex + 1} Question`, {
+          size: 22,
+          width: 1040,
+          align: "center"
+        }),
+        pos(width() / 2, 50),
+        anchor("center"),
+        color(180, 220, 255),
+        fixed()
+      ]);
+
+      add([
+        text(data.question, {
+          size: questionTextSize(data.question),
+          width: 1040,
+          align: "left"
+        }),
+        pos(120, 90),
+        color(255, 255, 255),
+        fixed()
       ]);
 
       data.choices.forEach((choice, i) => {
+        const y = 330 + i * 82;
+
         add([
-          text(choice),
-          pos(100, 200 + i * 60),
+          rect(1040, 66),
+          pos(120, y),
           area(),
+          color(50, 50, 85),
+          fixed(),
           "choice",
           { value: choice }
+        ]);
+
+        add([
+          text(choice, {
+            size: choice.length > 55 ? 17 : 20,
+            width: 980,
+            align: "left"
+          }),
+          pos(145, y + 18),
+          color(255, 255, 255),
+          fixed()
         ]);
       });
 
