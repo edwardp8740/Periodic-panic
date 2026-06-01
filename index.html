@@ -740,17 +740,17 @@
       });
 
       // I make some floor blocks randomly fall to keep the troll part.
-      player.onCollide("troll", (tile) => {
-        if (rand() < 0.25) {
-          wait(0.2, () => {
-            tile.use(body({ isStatic: false }));
+      // player.onCollide("troll", (tile) => {
+      //   if (rand() < 0.25) {
+      //     wait(0.2, () => {
+      //       tile.use(body({ isStatic: false }));
 
-            if (rand() < 0.5) {
-              destroy(tile);
-            }
-          });
-        }
-      });
+      //       if (rand() < 0.5) {
+      //         destroy(tile);
+      //       }
+      //     });
+      //   }
+      // });
 
       // I keep the camera on the player and reset if I fall off.
       player.onUpdate(() => {
