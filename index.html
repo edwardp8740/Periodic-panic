@@ -92,21 +92,13 @@
       ]);
     }
 
-    // I move the player back to the checkpoint unless they are out of health.
-    function hurtPlayer(p, checkpoint) {
-      if (hurtTimer > 0) return false;
+    // I count every hit as a death and restart the current level right away.
+    function hurtPlayer(levelIndex) {
+      if (hurtTimer > 0) return;
 
       hurtTimer = 0.4;
-      p.hurt(1);
-
-      if (p.hp() <= 0) {
-        deaths++;
-        return true;
-      }
-
-      p.pos = checkpoint.clone();
-      p.vel = vec2(0, 0);
-      return false;
+      deaths++;
+      go("game", { i: levelIndex });
     }
 
     // I drop a falling trap near a certain x spot.
@@ -325,17 +317,12 @@
           "====================================================================================",
         ],
         special(p) {
-          fallingZone(700, 1.4);
-          fallingZone(2600, 1.5);
-          crusher(650);
-          sweeper(1050, LOW_TRAP_Y);
-          mine(1450);
-          laser(1900);
-          dart(2450, MID_TRAP_Y);
-          sweeper(3100, HIGH_TRAP_Y, 160, 3.5);
-          mine(3600);
-          crusher(4150);
-          dart(4700, LOW_TRAP_Y, 460);
+          fallingZone(1200, 1.8, 360, 330);
+          sweeper(1150, LOW_TRAP_Y, 150, 2.6);
+          mine(1850);
+          laser(2700, 130, 320, 210);
+          sweeper(3500, HIGH_TRAP_Y, 130, 2.8);
+          dart(4350, LOW_TRAP_Y, 360);
         }
       },
 
@@ -355,18 +342,14 @@
           "====================================================================================",
         ],
         special(p) {
-          fallingZone(700, 0.75, 420, 380);
-          fallingZone(1900, 0.8, 420, 390);
-          fallingZone(3200, 0.85, 420, 400);
-          fallingZone(4400, 0.9, 420, 410);
-          laser(850);
-          dart(1350, MID_TRAP_Y, 430);
-          sweeper(2050, LOW_TRAP_Y, 190, 3.3);
-          mine(2550);
-          laser(3050, 100, 330, 260);
-          dart(3700, HIGH_TRAP_Y, 500);
-          sweeper(4300, MID_TRAP_Y, 170, 3.8);
-          mine(4850);
+          fallingZone(900, 1.05, 390, 350);
+          fallingZone(2500, 1.1, 390, 360);
+          fallingZone(4100, 1.15, 390, 370);
+          laser(950, 120, 320, 220);
+          sweeper(2050, LOW_TRAP_Y, 170, 3);
+          mine(2850);
+          dart(3700, HIGH_TRAP_Y, 430);
+          sweeper(4500, MID_TRAP_Y, 150, 3.2);
         }
       },
 
@@ -387,15 +370,12 @@
         ],
         special(p) {
           chaser(p, 700);
-          dart(1150, MID_TRAP_Y, 450);
-          mine(1550);
-          sweeper(2050, LOW_TRAP_Y, 200, 3.2);
-          chaser(p, 2500);
-          laser(3000);
-          dart(3450, HIGH_TRAP_Y, 500);
-          mine(3900);
-          sweeper(4300, MID_TRAP_Y, 170, 3.6);
-          chaser(p, 4700);
+          dart(1300, MID_TRAP_Y, 390);
+          mine(1800);
+          sweeper(2350, LOW_TRAP_Y, 170, 2.9);
+          chaser(p, 3100);
+          laser(3650, 120, 320, 220);
+          sweeper(4350, MID_TRAP_Y, 145, 3.1);
         }
       },
 
@@ -415,16 +395,13 @@
           "====================================================================================",
         ],
         special(p) {
-          crusher(650);
-          sweeper(1100, LOW_TRAP_Y, 180, 3.5);
-          crusher(1600, 80, 300, 270);
-          dart(2150, MID_TRAP_Y, 460);
-          laser(2700);
-          crusher(3200, 95, 295, 280);
-          mine(3650);
-          sweeper(4100, HIGH_TRAP_Y, 150, 4);
-          dart(4550, LOW_TRAP_Y, 500);
-          crusher(4900, 85, 300, 290);
+          crusher(750, 90, 285, 220);
+          sweeper(1350, LOW_TRAP_Y, 155, 3);
+          dart(2100, MID_TRAP_Y, 400);
+          laser(2800, 120, 320, 225);
+          crusher(3450, 95, 285, 235);
+          mine(3950);
+          sweeper(4550, HIGH_TRAP_Y, 130, 3.2);
         }
       },
 
@@ -445,16 +422,14 @@
         ],
         special(p) {
           acid();
-          fallingZone(900, 1.15, 400, 380);
+          fallingZone(900, 1.2, 400, 370);
           chaser(p, 1300);
           mine(1750);
-          dart(2200, MID_TRAP_Y, 460);
-          laser(2700, 110, 325, 260);
-          sweeper(3200, LOW_TRAP_Y, 190, 3.4);
-          fallingZone(3650, 1, 420, 400);
+          dart(2200, MID_TRAP_Y, 440);
+          laser(2700, 110, 325, 250);
+          sweeper(3200, LOW_TRAP_Y, 180, 3.2);
           mine(4100);
-          chaser(p, 4500);
-          dart(4850, HIGH_TRAP_Y, 520);
+          dart(4850, HIGH_TRAP_Y, 500);
         }
       },
 
@@ -475,17 +450,15 @@
         ],
         special(p) {
           acid();
-          fallingZone(700, 0.85, 420, 390);
+          fallingZone(700, 1.05, 420, 370);
           chaser(p, 1000);
           crusher(1450);
-          sweeper(1900, LOW_TRAP_Y, 190, 3.6);
-          dart(2350, MID_TRAP_Y, 480);
-          fallingZone(2850, 0.8, 420, 410);
-          laser(3300, 100, 330, 270);
-          mine(3750);
-          chaser(p, 4200);
-          crusher(4550, 90, 300, 285);
-          dart(4900, HIGH_TRAP_Y, 540);
+          sweeper(1900, LOW_TRAP_Y, 180, 3.3);
+          dart(2350, MID_TRAP_Y, 450);
+          fallingZone(2850, 1, 420, 385);
+          laser(3300, 100, 330, 255);
+          crusher(4550, 90, 300, 270);
+          dart(4900, HIGH_TRAP_Y, 510);
         }
       },
 
@@ -505,17 +478,15 @@
           "====================================================================================",
         ],
         special(p) {
-          laser(650, 95, 330, 260);
-          dart(1050, HIGH_TRAP_Y, 500);
-          laser(1450, 120, 330, 270);
-          sweeper(1900, MID_TRAP_Y, 170, 3.6);
-          laser(2350, 90, 330, 280);
+          laser(650, 95, 330, 250);
+          laser(1450, 120, 330, 260);
+          sweeper(1900, MID_TRAP_Y, 160, 3.3);
+          laser(2350, 90, 330, 270);
           mine(2800);
-          dart(3200, LOW_TRAP_Y, 500);
-          laser(3650, 110, 330, 290);
-          sweeper(4100, HIGH_TRAP_Y, 160, 4);
-          laser(4550, 100, 330, 300);
-          dart(4900, MID_TRAP_Y, 540);
+          dart(3200, LOW_TRAP_Y, 470);
+          laser(3650, 110, 330, 275);
+          sweeper(4100, HIGH_TRAP_Y, 145, 3.6);
+          dart(4900, MID_TRAP_Y, 500);
         }
       },
 
@@ -536,17 +507,15 @@
         ],
         special(p) {
           acid();
-          fallingZone(650, 0.9, 420, 390);
+          fallingZone(650, 1.05, 420, 370);
           chaser(p, 950);
-          laser(1350);
-          sweeper(1800, LOW_TRAP_Y, 200, 3.5);
-          dart(2250, MID_TRAP_Y, 500);
+          laser(1350, 120, 330, 240);
+          sweeper(1800, LOW_TRAP_Y, 180, 3.2);
+          dart(2250, MID_TRAP_Y, 470);
           mine(2700);
-          chaser(p, 3150);
-          fallingZone(3550, 0.85, 420, 410);
-          laser(3950, 100, 330, 280);
-          sweeper(4350, HIGH_TRAP_Y, 170, 4);
-          dart(4800, LOW_TRAP_Y, 540);
+          laser(3950, 100, 330, 260);
+          sweeper(4350, HIGH_TRAP_Y, 150, 3.6);
+          dart(4800, LOW_TRAP_Y, 500);
         }
       },
 
@@ -567,19 +536,15 @@
         ],
         special(p) {
           acid();
-          fallingZone(600, 0.6, 440, 420);
+          fallingZone(600, 0.8, 430, 395);
           chaser(p, 850);
-          crusher(1200, 80, 300, 300);
-          dart(1600, HIGH_TRAP_Y, 560);
-          sweeper(2000, LOW_TRAP_Y, 220, 4);
-          laser(2450, 95, 330, 310);
-          mine(2850);
-          fallingZone(3150, 0.55, 440, 430);
-          chaser(p, 3500);
-          crusher(3900, 80, 300, 310);
-          dart(4300, MID_TRAP_Y, 580);
-          sweeper(4650, LOW_TRAP_Y, 220, 4.4);
-          laser(4950, 90, 330, 320);
+          crusher(1200, 80, 300, 285);
+          dart(1600, HIGH_TRAP_Y, 520);
+          sweeper(2000, LOW_TRAP_Y, 200, 3.6);
+          laser(2450, 95, 330, 290);
+          fallingZone(3150, 0.75, 420, 400);
+          dart(4300, MID_TRAP_Y, 540);
+          sweeper(4650, LOW_TRAP_Y, 200, 4);
         }
       }
     ];
@@ -696,7 +661,7 @@
       bg(L.bg);
       setGravity(1600);
 
-      let checkpoint = L.start.clone();
+      let startPosition = L.start.clone();
 
       addLevel(padMap(L.map), {
         tileWidth: TILE,
@@ -706,12 +671,11 @@
 
       const player = add([
         rect(36, 36),
-        pos(checkpoint),
+        pos(startPosition),
         area(),
         body(),
         color(255, 255, 255),
         "player",
-        health(3),
       ]);
 
       // I keep track of how many times I die.
@@ -739,7 +703,7 @@
         if (player.isGrounded()) player.jump(JUMP_FORCE);
       });
 
-      // I make some floor blocks randomly fall to keep the troll part.
+      // I turned off the random falling floor blocks so the difficulty comes from planned traps.
       // player.onCollide("troll", (tile) => {
       //   if (rand() < 0.25) {
       //     wait(0.2, () => {
@@ -752,7 +716,7 @@
       //   }
       // });
 
-      // I keep the camera on the player and reset if I fall off.
+      // I keep the camera on the player and restart if I fall off.
       player.onUpdate(() => {
         camPos(player.pos);
         hurtTimer = Math.max(0, hurtTimer - dt());
@@ -763,15 +727,12 @@
         }
       });
 
-      // I handle all danger, checkpoint, and level-end collisions here.
+      // I restart the whole level from one hit instead of waiting for three hits.
       player.onCollide("danger", () => {
-        if (hurtPlayer(player, checkpoint)) {
-          go("game", { i });
-        }
+        hurtPlayer(i);
       });
 
       player.onCollide("checkpoint", (c) => {
-        checkpoint = c.pos.clone();
         destroy(c);
       });
 

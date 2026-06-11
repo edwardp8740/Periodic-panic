@@ -1,11 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-
 const app = express();
-
 app.use(cors());
-
 // I serve the index.html from the folder above my node folder.
 app.use(express.static(path.join(__dirname, "..")));
 
@@ -187,10 +184,10 @@ app.get("/question/:unit", (req, res) => {
   // I only choose randomly from the unit that matches the level.
   const randomIndex = Math.floor(Math.random() * unitQuestions.length);
   res.json(unitQuestions[randomIndex]);
-});
+  });
 
-const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`API running on port ${PORT}`);
+  app.listen(PORT, () => {
+    console.log(`API running on port ${PORT}`);
 });
